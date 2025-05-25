@@ -14,9 +14,9 @@ const Home: React.FC = () => {
   return (
     <div className='container'>
       <h1>IT 초성 퀴즈</h1>
-      <button onClick={handleGoToAbout}></button>
-      <button onClick={handleGoToTest}></button>
-      <button onClick={handleGoToTest}></button>
+      <button onClick={handleGoToAbout}>About페이지로 이동</button>
+      <button onClick={handleGoToTest}>Test페이지로 이동</button>
+      <button onClick={handleGoToTest}>아직 미정</button>
     </div>
   );
 };
