@@ -20,6 +20,7 @@ const Home: React.FC = () => {
       <button onClick={handleGoToAbout}>About페이지로 이동</button>
       <button onClick={handleGoToTest}>Test페이지로 이동</button>
       <button onClick={handleGoToUm}>아직 미정</button>
+      <div>git hub test div tag</div>
     </div>
   );
 };
