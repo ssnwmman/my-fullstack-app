@@ -13,7 +13,6 @@ const Test: React.FC = () => {
     <div>
       <h1>Test 페이지</h1>
       <button onClick={handleGoToHome}>Home 페이지로 이동</button>
-      <br />
       <button onClick={handleGoToAbout}>About 페이지로 이동</button>
     </div>
   );
