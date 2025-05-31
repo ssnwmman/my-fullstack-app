@@ -7,21 +7,20 @@ type Message = {
   hint?: string;
 };
 
-const Onlinegame: React.FC = () => {
+const Onlinegame = () => {
   const [messages, setMessages] = useState<string[]>([]);
   const [question, setQuestion] = useState<string>("");
   const [hint, setHint] = useState<string>("");
   const [input, setInput] = useState("");
+  const [username, setUsername] = useState("");
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const name = prompt("닉네임을 입력하세요") || "익명";
+    setUsername(name);
     const socket = new WebSocket(`ws://localhost:8000/ws?username=${encodeURIComponent(name)}`);
     ws.current = socket;
-
-    socket.onopen = () => {
-      console.log("웹소켓 연결 성공");
-    };
 
     socket.onmessage = (event) => {
       const data: Message = JSON.parse(event.data);
@@ -42,6 +41,11 @@ const Onlinegame: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    // 채팅창 스크롤 아래로 이동
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const sendMessage = () => {
     if (input.trim() && ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(input.trim());
@@ -50,27 +54,53 @@ const Onlinegame: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>🧩 초성 + 힌트 퀴즈 게임</h1>
+    <div style={{ padding: "2rem", fontFamily: "sans-serif", maxWidth: "600px", margin: "0 auto" }}>
+      <h1>🧩 온라인 IT 초성 퀴즈 게임</h1>
       <h2>문제: {question}</h2>
       <p>힌트: {hint}</p>
 
-      <input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="정답 입력..."
-        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-        style={{ padding: "0.5rem", width: "300px" }}
-      />
-      <button onClick={sendMessage} style={{ marginLeft: "1rem", padding: "0.5rem" }}>
-        제출
-      </button>
+      <div style={{ display: "flex", marginTop: "1rem" }}>
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="정답 입력..."
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          style={{ padding: "0.5rem", flex: 1 }}
+        />
+        <button onClick={sendMessage} style={{ marginLeft: "1rem", padding: "0.5rem 1rem" }}>
+          제출
+        </button>
+      </div>
 
-      <ul style={{ marginTop: "2rem" }}>
+      <div
+        style={{
+          marginTop: "2rem",
+          height: "300px",
+          overflowY: "auto",
+          border: "1px solid #ccc",
+          padding: "1rem",
+          borderRadius: "8px",
+          backgroundColor: "#f9f9f9",
+        }}
+      >
         {messages.map((msg, i) => (
-          <li key={i}>{msg}</li>
+          <div
+            key={i}
+            style={{
+              backgroundColor: msg.includes(username) ? "#d1e7dd" : "#ffffff",
+              padding: "0.5rem 1rem",
+              marginBottom: "0.5rem",
+              borderRadius: "20px",
+              alignSelf: "flex-start",
+              maxWidth: "80%",
+              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+            }}
+          >
+            {msg}
+          </div>
         ))}
-      </ul>
+        <div ref={chatEndRef} />
+      </div>
     </div>
   );
 };
