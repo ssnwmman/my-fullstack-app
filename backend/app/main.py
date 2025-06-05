@@ -6,7 +6,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 개발 단계라 모두 허용 (배포시 제한 필요)
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,7 +27,6 @@ class ConnectionManager:
         await websocket.accept()
         self.active_connections[websocket] = username
         await self.broadcast_chat(f"✅ {username} 님이 접속했습니다.")
-        # 새 접속자에게 현재 문제와 힌트 전달
         await self.send_personal_message({
             "type": "quiz",
             "question": self.current_question["question"],
