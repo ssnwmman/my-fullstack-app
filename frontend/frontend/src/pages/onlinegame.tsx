@@ -1,108 +1,115 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
-type Message = {
-  type: "chat" | "quiz";
+interface Message {
+  type: string;
   message?: string;
   question?: string;
   hint?: string;
-};
+  time_left?: number;
+}
 
-const Onlinegame = () => {
-  const [messages, setMessages] = useState<string[]>([]);
+const WS_URL = "ws://localhost:8000/ws?username=사용자";  // username 적절히 변경
+
+export default function QuizGame() {
+  const ws = useRef<WebSocket | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [chatLog, setChatLog] = useState<string[]>([]);
   const [question, setQuestion] = useState<string>("");
   const [hint, setHint] = useState<string>("");
-  const [input, setInput] = useState("");
-  const [username, setUsername] = useState("");
-  const chatEndRef = useRef<HTMLDivElement | null>(null);
-  const ws = useRef<WebSocket | null>(null);
+  const [answer, setAnswer] = useState<string>("");
+  const [timeLeft, setTimeLeft] = useState<number>(0);
 
   useEffect(() => {
-    const name = prompt("닉네임을 입력하세요") || "익명";
-    setUsername(name);
-    const socket = new WebSocket(`ws://localhost:8000/ws?username=${encodeURIComponent(name)}`);
-    ws.current = socket;
+    ws.current = new WebSocket(WS_URL);
 
-    socket.onmessage = (event) => {
+    ws.current.onopen = () => {
+      setConnected(true);
+      setChatLog((prev) => [...prev, "✅ 서버와 연결되었습니다."]);
+    };
+
+    ws.current.onmessage = (event) => {
       const data: Message = JSON.parse(event.data);
-      if (data.type === "chat" && data.message) {
-        setMessages((prev) => [...prev, data.message!]);
-      } else if (data.type === "quiz" && data.question && data.hint) {
-        setQuestion(data.question);
-        setHint(data.hint);
+
+      if (data.type === "quiz") {
+        setQuestion(data.question || "");
+        setHint(data.hint || "");
+        setAnswer("");
+      } else if (data.type === "timer" && typeof data.time_left === "number") {
+        setTimeLeft(data.time_left);
+      } else if (data.type === "chat" && data.message) {
+        setChatLog((prev) => [...prev, data.message!]);
       }
     };
 
-    socket.onclose = () => {
-      setMessages((prev) => [...prev, "❗ 서버 연결 종료"]);
+    ws.current.onclose = () => {
+      setConnected(false);
+      setChatLog((prev) => [...prev, "⚠️ 서버와 연결이 끊어졌습니다."]);
+    };
+
+    ws.current.onerror = () => {
+      setChatLog((prev) => [...prev, "⚠️ 웹소켓 에러가 발생했습니다."]);
     };
 
     return () => {
-      socket.close();
+      ws.current?.close();
     };
   }, []);
 
-  useEffect(() => {
-    // 채팅창 스크롤 아래로 이동
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const sendMessage = () => {
-    if (input.trim() && ws.current?.readyState === WebSocket.OPEN) {
-      ws.current.send(input.trim());
-      setInput("");
-    }
+  const sendAnswer = () => {
+    if (!answer.trim()) return;
+    ws.current?.send(answer.trim());
+    setAnswer("");
   };
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif", maxWidth: "600px", margin: "0 auto" }}>
-      <h1>🧩 온라인 IT 초성 퀴즈 게임</h1>
-      <h2>문제: {question}</h2>
-      <p>힌트: {hint}</p>
+    <div style={{ maxWidth: 600, margin: "auto", fontFamily: "sans-serif" }}>
+      <h1>초성 퀴즈 게임</h1>
 
-      <div style={{ display: "flex", marginTop: "1rem" }}>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="정답 입력..."
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          style={{ padding: "0.5rem", flex: 1 }}
-        />
-        <button onClick={sendMessage} style={{ marginLeft: "1rem", padding: "0.5rem 1rem" }}>
-          제출
-        </button>
+      <div>
+        <strong>문제:</strong> {question}
       </div>
+      <div>
+        <strong>힌트:</strong> {hint}
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <strong>남은 시간:</strong> {timeLeft}초
+      </div>
+
+      <input
+        type="text"
+        placeholder="정답을 입력하세요"
+        value={answer}
+        onChange={(e) => setAnswer(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") sendAnswer();
+        }}
+        disabled={!connected}
+        style={{ width: "100%", padding: "8px", marginTop: "10px" }}
+      />
+      <button
+        onClick={sendAnswer}
+        disabled={!connected}
+        style={{ marginTop: 10, padding: "8px 16px" }}
+      >
+        제출
+      </button>
 
       <div
         style={{
-          marginTop: "2rem",
-          height: "300px",
-          overflowY: "auto",
+          marginTop: 20,
+          padding: 10,
           border: "1px solid #ccc",
-          padding: "1rem",
-          borderRadius: "8px",
+          height: 200,
+          overflowY: "auto",
           backgroundColor: "#f9f9f9",
         }}
       >
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            style={{
-              backgroundColor: msg.includes(username) ? "#d1e7dd" : "#ffffff",
-              padding: "0.5rem 1rem",
-              marginBottom: "0.5rem",
-              borderRadius: "20px",
-              alignSelf: "flex-start",
-              maxWidth: "80%",
-              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-            }}
-          >
+        {chatLog.map((msg, idx) => (
+          <div key={idx} style={{ marginBottom: 5 }}>
             {msg}
           </div>
         ))}
-        <div ref={chatEndRef} />
       </div>
     </div>
   );
-};
-
-export default Onlinegame;
+}
